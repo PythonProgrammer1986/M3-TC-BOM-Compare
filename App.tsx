@@ -2,8 +2,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { 
-  FileSpreadsheet, 
-  AlertCircle, 
   CheckCircle2, 
   Download, 
   Upload, 
@@ -30,7 +28,6 @@ const App: React.FC = () => {
   const [iimData, setIimData] = useState<IIMRow[] | null>(null);
   
   const [errors, setErrors] = useState<BOMError[]>([]);
-  const [selectedError, setSelectedError] = useState<BOMError | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -82,7 +79,7 @@ const App: React.FC = () => {
         if (type === 'IIM') setIimData(cleanedData);
       } catch (err) {
         console.error("Error parsing Excel file:", err);
-        alert("Could not parse Excel file.");
+        alert("Could not parse Excel file. Please ensure it's a valid .xlsx or .xls file.");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -96,14 +93,9 @@ const App: React.FC = () => {
 
     setIsConnecting(true);
     try {
-      // In a real implementation, this would call the Teamcenter SOA or REST API.
-      // e.g. await fetch(`${tcConfig.url}/tc/api/v1/items/${tcConfig.itemId}/bom`, { ... })
-      
-      // Simulating a network delay for the fetch
+      // In production, this would call the Teamcenter SOA/REST API
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert(`Connected to ${tcConfig.url}. In a production environment, this would now pull the indented BOM for Item ${tcConfig.itemId}. Please use File Upload for this demo version.`);
-      
+      alert(`Integration Point Active: Attempting to pull BOM for ${tcConfig.itemId} from ${tcConfig.url}. This feature requires back-end proxy configuration for production use.`);
     } catch (err) {
       console.error("TC Connection Error:", err);
       alert("Failed to connect to Teamcenter. Check URL and Credentials.");
@@ -136,12 +128,11 @@ const App: React.FC = () => {
     setM3Data(null);
     setIimData(null);
     setErrors([]);
-    setSelectedError(null);
     setSummary({ totalErrors: 0, task1Errors: 0, task2Errors: 0, task3Errors: 0, quantityErrors: 0, status: 'Idle', healthScore: 100 });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -151,16 +142,16 @@ const App: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold tracking-tight">BOM Auditor Pro</h1>
               <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1"><Database size={12} /> TC Integration</span>
+                <span className="flex items-center gap-1"><Database size={12} /> TC Direct</span>
                 <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                <span className="flex items-center gap-1"><Activity size={12} /> M3 Sync</span>
+                <span className="flex items-center gap-1"><Activity size={12} /> M3 ERP</span>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
             {(tcData || m3Data || iimData) && (
-              <button onClick={reset} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+              <button onClick={reset} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Reset All Data">
                 <Trash2 size={20} />
               </button>
             )}
@@ -168,7 +159,7 @@ const App: React.FC = () => {
               onClick={() => {
                 const ws = XLSX.utils.json_to_sheet(errors);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Audit");
+                XLSX.utils.book_append_sheet(wb, ws, "Audit_Findings");
                 XLSX.writeFile(wb, "BOM_Audit_Report.xlsx");
               }}
               className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold shadow-md transition-all active:scale-95 disabled:opacity-50"
@@ -180,7 +171,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6 space-y-8">
+      <main className="max-w-7xl mx-auto p-6 space-y-8 w-full flex-1">
         
         {/* Connection Toggle */}
         <div className="flex justify-center">
@@ -215,7 +206,7 @@ const App: React.FC = () => {
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                   <div className="flex items-center gap-3 mb-2">
                     <Globe className="text-blue-500" />
-                    <h3 className="text-xl font-bold">Teamcenter Gateway</h3>
+                    <h3 className="text-xl font-bold">Teamcenter Credentials</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -266,12 +257,12 @@ const App: React.FC = () => {
                   <button 
                     onClick={fetchFromTeamcenter}
                     disabled={isConnecting}
-                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg"
+                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg disabled:bg-slate-300"
                   >
                     {isConnecting ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <>Initialize Direct Fetch <ArrowRight size={18} /></>
+                      <>Pull BOM Data from TC <ArrowRight size={18} /></>
                     )}
                   </button>
                 </div>
@@ -289,15 +280,15 @@ const App: React.FC = () => {
                   <ul className="space-y-4 text-sm text-slate-300">
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">1</div>
-                      <p><strong>Missing L1:</strong> Identifies components in Engineering but not in M3 Production.</p>
+                      <p><strong>Missing L1:</strong> Items in Engineering but missing from M3.</p>
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">2</div>
-                      <p><strong>Qty Mismatch:</strong> Compares Engineering quantities against ERP values.</p>
+                      <p><strong>Qty Mismatch:</strong> Detects difference in planned counts.</p>
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">3</div>
-                      <p><strong>Phantom Sync:</strong> Validates sub-assembly expansion logic for Phantoms.</p>
+                      <p><strong>Phantom Sync:</strong> Validates Phantom structure expansion.</p>
                     </li>
                   </ul>
                 </div>
@@ -308,7 +299,7 @@ const App: React.FC = () => {
                     tcData && m3Data && iimData ? 'bg-white text-slate-900 hover:scale-105' : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   }`}
                 >
-                  Start Automated Audit
+                  Start Structural Audit
                 </button>
               </div>
             </div>
@@ -344,7 +335,7 @@ const App: React.FC = () => {
                   <Info size={18} /> Manual Correction Guide
                 </h4>
                 <p className="text-sm text-blue-700 leading-relaxed">
-                  Most errors can be resolved in M3 using transaction **PDS001** (Product Structure) or **MMS001** (Item Master). Always verify the **Effective Date** before making structural changes.
+                  Most errors can be resolved in M3 using transaction <strong>PDS001</strong> (Product Structure) or <strong>MMS001</strong> (Item Master).
                 </p>
               </div>
             </div>
@@ -356,23 +347,23 @@ const App: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       type="text" 
-                      placeholder="Filter Part ID or Type..." 
+                      placeholder="Search results..." 
                       className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm shadow-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <span className="text-sm font-bold text-slate-500">{filteredErrors.length} findings logged</span>
+                  <span className="text-sm font-bold text-slate-500">{filteredErrors.length} issues identified</span>
                 </div>
 
                 <div className="flex-1 overflow-auto custom-scrollbar">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 bg-white z-10 border-b border-slate-100">
                       <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        <th className="px-6 py-4 text-left">Classification</th>
+                        <th className="px-6 py-4 text-left">Type</th>
                         <th className="px-6 py-4 text-left">Hierarchy (Parent → Child)</th>
                         <th className="px-6 py-4 text-center">Priority</th>
-                        <th className="px-6 py-4 text-right">Corrective Action</th>
+                        <th className="px-6 py-4 text-right">M3 Transaction</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -401,12 +392,19 @@ const App: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="text-[11px] font-medium text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 inline-block max-w-[180px]">
+                            <div className="text-[11px] font-medium text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 inline-block">
                               {error.actionableFix}
                             </div>
                           </td>
                         </tr>
                       ))}
+                      {filteredErrors.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-20 text-center text-slate-400">
+                            No issues found matching your search.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

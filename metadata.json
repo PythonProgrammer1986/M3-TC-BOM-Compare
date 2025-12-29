@@ -1,0 +1,5 @@
+{
+  "name": "BOM Validator Pro",
+  "description": "An enterprise-grade tool for validating Bill of Materials (BOM) consistency between Teamcenter (TC), M3 ERP, and Item Master (IIM) data. It automatically identifies missing items, phantom mismatches, and policy violations.",
+  "requestFramePermissions": []
+}
